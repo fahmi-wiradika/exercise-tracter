@@ -24,7 +24,7 @@ const CreateUser = async (req, res) => {
 
 // Crate new exercise tracker app.post('/api/users/:_id/exercises',
 const CreateExercise = async (req, res) => {
-    const id = req.params._id;
+    const id = req.params.id;
     const { description, duration, date } = req.body;
 
     try {
@@ -83,6 +83,7 @@ const GetUserLogs = async (req, res) => {
     }
     const exercises = await Exercise.find(filter).limit(+limit ?? 500);
     const log = exercises.map(e => ({
+        _id: e._id,
         description: e.description,
         duration: e.duration,
         date: e.date.toDateString()
@@ -98,11 +99,45 @@ const GetUserLogs = async (req, res) => {
 
 }
 
+// Delete a user and cascade-delete their exercises
+const DeleteUser = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const user = await User.findByIdAndDelete(id);
+        if (!user) {
+            res.status(404).json({ message: "Could not find user" });
+            return;
+        }
+        await Exercise.deleteMany({ user_id: id });
+        res.status(200).json({ message: "User and their exercises deleted", _id: user._id, username: user.username });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
+// Delete a single exercise entry belonging to a user
+const DeleteExercise = async (req, res) => {
+    const { id, exerciseId } = req.params;
+
+    try {
+        const exercise = await Exercise.findOneAndDelete({ _id: exerciseId, user_id: id });
+        if (!exercise) {
+            res.status(404).json({ message: "Could not find exercise for this user" });
+            return;
+        }
+        res.status(200).json({ message: "Exercise deleted", _id: exercise._id });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
 
 // export function
 module.exports = {
     GetAllUsers,
     CreateUser,
     CreateExercise,
-    GetUserLogs
+    GetUserLogs,
+    DeleteUser,
+    DeleteExercise
 }

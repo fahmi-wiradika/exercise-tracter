@@ -2,29 +2,81 @@
 <html>
   <head>
     <title>Exercise Tracker | freeCodeCamp</title>
-    <link rel="shortcut icon" href="https://cdn.freecodecamp.org/universal/favicons/favicon.ico"  type="image/x-icon" />
+    <link rel="shortcut icon" href="https://cdn.freecodecamp.org/universal/favicons/favicon.ico" type="image/x-icon" />
     <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet" type="text/css" />
     <link href="style.css" rel="stylesheet" type="text/css" />
+    <script src="vendor/chart.umd.js"></script>
   </head>
 
   <body>
     <div class="container">
       <h1>Exercise tracker</h1>
-      <form action="/api/users" method="post">
-        <h2>Create a New User</h2>
-        <p><code>POST /api/users</code></p>
-        <input id="uname" type="text" name="username" placeholder="username" />
-        <input type="submit" value="Submit" />
-      </form>
-      <form action="/api/users/:_id/exercises" id="exercise-form" method="post">
-        <h2>Add exercises</h2>
-        <p><code>POST /api/users/:_id/exercises</code></p>
-        <input id="uid" type="text" name=":_id" placeholder=":_id" />
-        <input id="desc" type="text" name="description" placeholder="description*" />
-        <input id="dur" type="text" name="duration" placeholder="duration* (mins.)" />
-        <input id="date" type="text" name="date" placeholder="date (yyyy-mm-dd)" />
-        <input type="submit" value="Submit" />
-      </form>
+      <p class="subtitle">Track workouts and progress over time</p>
+
+      <div class="grid-2">
+        <div class="card">
+          <h2>Create a new user</h2>
+          <p class="route-label"><code>POST /api/users</code></p>
+          <input id="uname" type="text" placeholder="username" />
+          <button id="create-user-btn">Create user</button>
+          <p id="create-user-msg" class="msg"></p>
+        </div>
+
+        <div class="card">
+          <h2>Select user</h2>
+          <select id="user-select">
+            <option value="">-- choose a user --</option>
+          </select>
+          <div class="btn-row">
+            <button id="view-log-btn">View log</button>
+            <button id="delete-user-btn" class="danger">Delete user</button>
+          </div>
+          <p id="select-user-msg" class="msg"></p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Log an exercise</h2>
+        <p class="route-label"><code>POST /api/users/:_id/exercises</code></p>
+        <div class="grid-3">
+          <select id="activity-select">
+            <option value="">-- activity --</option>
+            <option value="Walking">Walking</option>
+            <option value="Running">Running</option>
+            <option value="Cycling">Cycling</option>
+            <option value="Swimming">Swimming</option>
+            <option value="Weight training">Weight training</option>
+            <option value="Yoga">Yoga</option>
+            <option value="HIIT/Cardio">HIIT/Cardio</option>
+            <option value="Other">Other</option>
+          </select>
+          <input id="duration" type="text" placeholder="duration (mins.)" />
+          <input id="date" type="text" placeholder="date (yyyy-mm-dd)" />
+        </div>
+        <button id="add-exercise-btn">Add exercise</button>
+        <p id="add-exercise-msg" class="msg"></p>
+      </div>
+
+      <div class="card" id="log-card" style="display:none;">
+        <div class="log-header">
+          <h2 id="log-title">Log</h2>
+          <span id="log-streak" class="streak"></span>
+        </div>
+        <canvas id="duration-chart" height="90" style="display:none;"></canvas>
+        <table id="log-table">
+          <thead>
+            <tr>
+              <th>Activity</th>
+              <th>Duration</th>
+              <th>Est. calories</th>
+              <th>Date</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="log-body"></tbody>
+        </table>
+      </div>
+
       <p>
         <strong>GET user's exercise log: </strong>
         <code>GET /api/users/:_id/logs?[from][&amp;to][&amp;limit]</code>
@@ -32,15 +84,232 @@
       <p><strong>[ ]</strong> = optional</p>
       <p><strong>from, to</strong> = dates (yyyy-mm-dd); <strong>limit</strong> = number</p>
     </div>
+
     <script>
-      const exerciseForm = document.getElementById("exercise-form");
+      // Approx MET (Metabolic Equivalent of Task) values per activity, used only
+      // for a rough client-side calorie estimate. Formula: MET * 3.5 * weightKg / 200 * minutes
+      // Since the app doesn't collect body weight yet, we assume an average 70kg adult.
+      const MET_VALUES = {
+        "Walking": 3.5,
+        "Running": 10,
+        "Cycling": 8,
+        "Swimming": 7,
+        "Weight training": 5,
+        "Yoga": 3,
+        "HIIT/Cardio": 9,
+        "Other": 5
+      };
+      const ASSUMED_WEIGHT_KG = 70;
 
-      exerciseForm.addEventListener("submit", () => {
-        const userId = document.getElementById("uid").value;
-        exerciseForm.action = `/api/users/${userId}/exercises`;
+      function estimateCalories(activity, durationMinutes) {
+        const met = MET_VALUES[activity] ?? MET_VALUES["Other"];
+        const calories = (met * 3.5 * ASSUMED_WEIGHT_KG) / 200 * durationMinutes;
+        return Math.round(calories);
+      }
 
-        exerciseForm.submit();
+      const userSelect = document.getElementById("user-select");
+      const createUserBtn = document.getElementById("create-user-btn");
+      const createUserMsg = document.getElementById("create-user-msg");
+      const selectUserMsg = document.getElementById("select-user-msg");
+      const viewLogBtn = document.getElementById("view-log-btn");
+      const deleteUserBtn = document.getElementById("delete-user-btn");
+      const addExerciseBtn = document.getElementById("add-exercise-btn");
+      const addExerciseMsg = document.getElementById("add-exercise-msg");
+      const logCard = document.getElementById("log-card");
+      const logTitle = document.getElementById("log-title");
+      const logStreak = document.getElementById("log-streak");
+      const logBody = document.getElementById("log-body");
+      const durationChartCanvas = document.getElementById("duration-chart");
+      let chartInstance = null;
+
+      async function refreshUsers(selectId) {
+        userSelect.innerHTML = '<option value="">-- choose a user --</option>';
+        try {
+          const res = await fetch("/api/users");
+          const users = await res.json();
+          users.forEach(u => {
+            const opt = document.createElement("option");
+            opt.value = u._id;
+            opt.textContent = u.username;
+            userSelect.appendChild(opt);
+          });
+          if (selectId) {
+            userSelect.value = selectId;
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      function countThisWeek(log) {
+        const now = new Date();
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        startOfWeek.setHours(0, 0, 0, 0);
+        return log.filter(e => new Date(e.date) >= startOfWeek).length;
+      }
+
+      function renderChart(log) {
+        if (typeof Chart === "undefined") {
+          durationChartCanvas.style.display = "none";
+          return;
+        }
+        if (chartInstance) {
+          chartInstance.destroy();
+          chartInstance = null;
+        }
+        if (log.length < 3) {
+          durationChartCanvas.style.display = "none";
+          return;
+        }
+        durationChartCanvas.style.display = "block";
+        const sorted = [...log].sort((a, b) => new Date(a.date) - new Date(b.date));
+        chartInstance = new Chart(durationChartCanvas, {
+          type: "line",
+          data: {
+            labels: sorted.map(e => e.date),
+            datasets: [{
+              label: "Est. calories (kcal)",
+              data: sorted.map(e => estimateCalories(e.description, e.duration)),
+              borderWidth: 2,
+              tension: 0.25,
+              fill: false
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, title: { display: true, text: "Calories (kcal)" } } }
+          }
+        });
+      }
+
+      function renderLog(data) {
+        logCard.style.display = "block";
+        logTitle.textContent = data.username + "'s log (" + data.count + " entries)";
+        const weekCount = countThisWeek(data.log);
+        logStreak.textContent = weekCount + " exercise" + (weekCount === 1 ? "" : "s") + " this week";
+
+        logBody.innerHTML = "";
+        data.log.forEach(entry => {
+          const row = document.createElement("tr");
+          const calories = estimateCalories(entry.description, entry.duration);
+          row.innerHTML = `
+            <td>${entry.description}</td>
+            <td>${entry.duration} min</td>
+            <td>~${calories} kcal</td>
+            <td>${entry.date}</td>
+            <td><button class="danger small delete-exercise-btn" data-id="${entry._id}">Delete</button></td>
+          `;
+          logBody.appendChild(row);
+        });
+
+        document.querySelectorAll(".delete-exercise-btn").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const userId = userSelect.value;
+            const exerciseId = btn.getAttribute("data-id");
+            if (!userId || !exerciseId) return;
+            try {
+              await fetch(`/api/users/${userId}/exercises/${exerciseId}`, { method: "DELETE" });
+              await loadLog(userId);
+            } catch (err) {
+              console.error(err);
+            }
+          });
+        });
+
+        renderChart(data.log);
+      }
+
+      async function loadLog(userId) {
+        if (!userId) return;
+        try {
+          const res = await fetch(`/api/users/${userId}/logs`);
+          const data = await res.json();
+          renderLog(data);
+        } catch (err) {
+          console.error(err);
+        }
+      }
+
+      createUserBtn.addEventListener("click", async () => {
+        const username = document.getElementById("uname").value.trim();
+        if (!username) {
+          createUserMsg.textContent = "Enter a username first.";
+          return;
+        }
+        try {
+          const res = await fetch("/api/users", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username })
+          });
+          const user = await res.json();
+          document.getElementById("uname").value = "";
+          createUserMsg.textContent = `Created ${user.username}.`;
+          await refreshUsers(user._id);
+        } catch (err) {
+          createUserMsg.textContent = "Couldn't create user.";
+        }
       });
+
+      viewLogBtn.addEventListener("click", () => {
+        const userId = userSelect.value;
+        if (!userId) {
+          selectUserMsg.textContent = "Choose a user first.";
+          return;
+        }
+        selectUserMsg.textContent = "";
+        loadLog(userId);
+      });
+
+      deleteUserBtn.addEventListener("click", async () => {
+        const userId = userSelect.value;
+        if (!userId) {
+          selectUserMsg.textContent = "Choose a user first.";
+          return;
+        }
+        try {
+          await fetch(`/api/users/${userId}`, { method: "DELETE" });
+          selectUserMsg.textContent = "User deleted.";
+          logCard.style.display = "none";
+          await refreshUsers();
+        } catch (err) {
+          selectUserMsg.textContent = "Couldn't delete user.";
+        }
+      });
+
+      addExerciseBtn.addEventListener("click", async () => {
+        const userId = userSelect.value;
+        const activity = document.getElementById("activity-select").value;
+        const duration = document.getElementById("duration").value;
+        const date = document.getElementById("date").value;
+
+        if (!userId) {
+          addExerciseMsg.textContent = "Select a user above first.";
+          return;
+        }
+        if (!activity || !duration) {
+          addExerciseMsg.textContent = "Activity and duration are required.";
+          return;
+        }
+
+        try {
+          await fetch(`/api/users/${userId}/exercises`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ description: activity, duration, date })
+          });
+          addExerciseMsg.textContent = "Exercise added.";
+          document.getElementById("duration").value = "";
+          document.getElementById("date").value = "";
+          await loadLog(userId);
+        } catch (err) {
+          addExerciseMsg.textContent = "Couldn't add exercise.";
+        }
+      });
+
+      refreshUsers();
     </script>
   </body>
 </html>
