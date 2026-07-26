@@ -132,6 +132,65 @@ const DeleteExercise = async (req, res) => {
     }
 }
 
+// Edit a user's username (rejects duplicates against other users)
+const EditUser = async (req, res) => {
+    const { id } = req.params;
+    const { username } = req.body;
+
+    if (!username) {
+        res.status(400).json({ message: "Username is required" });
+        return;
+    }
+
+    try {
+        const existing = await User.findOne({ username, _id: { $ne: id } });
+        if (existing) {
+            res.status(409).json({ message: "That username is already taken" });
+            return;
+        }
+
+        const user = await User.findByIdAndUpdate(id, { username }, { new: true });
+        if (!user) {
+            res.status(404).json({ message: "Could not find user" });
+            return;
+        }
+        res.status(200).json({ _id: user._id, username: user.username });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
+// Edit an existing exercise entry belonging to a user
+const EditExercise = async (req, res) => {
+    const { id, exerciseId } = req.params;
+    const { description, duration, date } = req.body;
+
+    const update = {};
+    if (description !== undefined) update.description = description;
+    if (duration !== undefined) update.duration = duration;
+    if (date !== undefined) update.date = new Date(date);
+
+    try {
+        const exercise = await Exercise.findOneAndUpdate(
+            { _id: exerciseId, user_id: id },
+            update,
+            { new: true }
+        );
+        if (!exercise) {
+            res.status(404).json({ message: "Could not find exercise for this user" });
+            return;
+        }
+        res.status(200).json({
+            _id: exercise._id,
+            description: exercise.description,
+            duration: exercise.duration,
+            date: new Date(exercise.date).toDateString()
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+}
+
 // export function
 module.exports = {
     GetAllUsers,
@@ -139,5 +198,7 @@ module.exports = {
     CreateExercise,
     GetUserLogs,
     DeleteUser,
-    DeleteExercise
+    DeleteExercise,
+    EditUser,
+    EditExercise
 }
