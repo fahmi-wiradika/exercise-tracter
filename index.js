@@ -1,4 +1,5 @@
 const express = require('express')
+const path = require('path')
 const app = express()
 const cors = require('cors')
 require('dotenv').config()
@@ -10,7 +11,8 @@ const userRoute = require('./route/user.route.js');
 app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
-app.use(express.static('public'))
+app.use(express.static(path.join(__dirname, 'public')))
+app.use('/public', express.static(path.join(__dirname, 'public')))
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html')
 });

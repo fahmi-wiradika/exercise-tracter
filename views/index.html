@@ -1,315 +1,236 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Exercise Tracker | freeCodeCamp</title>
-    <link rel="shortcut icon" href="https://cdn.freecodecamp.org/universal/favicons/favicon.ico" type="image/x-icon" />
-    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet" type="text/css" />
-    <link href="style.css" rel="stylesheet" type="text/css" />
-    <script src="vendor/chart.umd.js"></script>
-  </head>
-
-  <body>
-    <div class="container">
-      <h1>Exercise tracker</h1>
-      <p class="subtitle">Track workouts and progress over time</p>
-
-      <div class="grid-2">
-        <div class="card">
-          <h2>Create a new user</h2>
-          <p class="route-label"><code>POST /api/users</code></p>
-          <input id="uname" type="text" placeholder="username" />
-          <button id="create-user-btn">Create user</button>
-          <p id="create-user-msg" class="msg"></p>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Exercise Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">ET</div>
+        <div>
+          <h1>Exercise Tracker</h1>
+          <p>Daily activity insight</p>
         </div>
+      </div>
 
-        <div class="card">
-          <h2>Select user</h2>
-          <select id="user-select">
-            <option value="">-- choose a user --</option>
-          </select>
-          <div class="btn-row">
-            <button id="view-log-btn">View log</button>
-            <button id="delete-user-btn" class="danger">Delete user</button>
+      <section class="sidebar-section">
+        <div class="section-head">
+          <span class="eyebrow">Overview</span>
+          <h2>What this app does</h2>
+        </div>
+        <p class="muted">
+          Record activities, track minutes, and review weekly calorie insights for each user.
+        </p>
+        <button class="btn btn-primary full" id="openAddUserBtn">+ Add user</button>
+      </section>
+
+      <section class="sidebar-section">
+        <div class="section-head">
+          <span class="eyebrow">Active users</span>
+          <h2>Select a user</h2>
+        </div>
+        <div id="userList" class="user-list"></div>
+      </section>
+    </aside>
+
+    <main class="main">
+      <section class="hero-card">
+        <div>
+          <span class="eyebrow">Dashboard</span>
+          <h2>Exercise tracking with clear insight</h2>
+          <p>
+            Choose a user to record exercise activity, view the weekly trend, and understand how much energy is spent over time.
+          </p>
+        </div>
+        <div class="hero-actions">
+          <div class="hero-stat">
+            <span class="hero-stat-label">Users</span>
+            <strong id="totalUsers">0</strong>
           </div>
-          <p id="select-user-msg" class="msg"></p>
+          <div class="hero-stat">
+            <span class="hero-stat-label">Activities</span>
+            <strong id="totalExercises">0</strong>
+          </div>
+          <div class="hero-stat">
+            <span class="hero-stat-label">Selected user</span>
+            <strong id="selectedUserLabel">None</strong>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div class="card">
-        <h2>Log an exercise</h2>
-        <p class="route-label"><code>POST /api/users/:_id/exercises</code></p>
-        <div class="grid-3">
-          <select id="activity-select">
-            <option value="">-- activity --</option>
-            <option value="Walking">Walking</option>
-            <option value="Running">Running</option>
-            <option value="Cycling">Cycling</option>
-            <option value="Swimming">Swimming</option>
-            <option value="Weight training">Weight training</option>
-            <option value="Yoga">Yoga</option>
-            <option value="HIIT/Cardio">HIIT/Cardio</option>
-            <option value="Other">Other</option>
-          </select>
-          <input id="duration" type="text" placeholder="duration (mins.)" />
-          <input id="date" type="text" placeholder="date (yyyy-mm-dd)" />
+      <section id="overviewPanel" class="overview-grid">
+        <article class="info-card">
+          <span class="eyebrow">General information</span>
+          <h3>Track what matters</h3>
+          <p>Log exercise by activity type, duration, and date. The app then summarizes activity volume and calorie output.</p>
+        </article>
+        <article class="info-card">
+          <span class="eyebrow">Graph insight</span>
+          <h3>Weekly calories per day</h3>
+          <p>The graph shows calories spent by date. When data is small, the app explains that more exercise records are needed for insight.</p>
+        </article>
+        <article class="info-card">
+          <span class="eyebrow">Workflow</span>
+          <h3>Select, record, review</h3>
+          <p>Pick a user from the sidebar, add exercise from the selected-user page, then review activity cards and graph results.</p>
+        </article>
+      </section>
+
+      <section id="userWorkspace" class="workspace hidden">
+        <header class="workspace-header">
+          <div>
+            <span class="eyebrow">Selected user</span>
+            <div class="title-row">
+              <h2 id="workspaceUserName">User</h2>
+              <button class="icon-btn" id="editUserBtn" title="Edit username">Edit</button>
+              <button class="icon-btn danger" id="deleteUserBtn" title="Delete user">Delete</button>
+            </div>
+            <p id="workspaceUserMeta" class="muted">No user selected</p>
+          </div>
+          <div class="workspace-actions">
+            <button class="btn btn-secondary" id="openAddExerciseBtn">+ Add exercise</button>
+          </div>
+        </header>
+
+        <section class="workspace-grid">
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Activity cards</span>
+                <h3>Recorded exercises</h3>
+              </div>
+              <div class="panel-meta" id="activitySummary">0 items</div>
+            </div>
+            <div id="activityList" class="activity-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <span class="eyebrow">Graph</span>
+                <h3>Calories spent per day</h3>
+              </div>
+              <div class="panel-meta" id="graphRange">This week</div>
+            </div>
+            <div id="graphMessage" class="graph-message hidden"></div>
+            <canvas id="calorieChart" width="720" height="420" aria-label="Exercise calories chart"></canvas>
+          </article>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <div id="userModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
+    <div class="modal-backdrop" data-close="userModal"></div>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <span class="eyebrow" id="userModalEyebrow">Add user</span>
+          <h3 id="userModalTitle">Create a new user</h3>
         </div>
-        <button id="add-exercise-btn">Add exercise</button>
-        <p id="add-exercise-msg" class="msg"></p>
+        <button class="close-btn" data-close="userModal">×</button>
       </div>
-
-      <div class="card" id="log-card" style="display:none;">
-        <div class="log-header">
-          <h2 id="log-title">Log</h2>
-          <span id="log-streak" class="streak"></span>
+      <form id="userForm" class="form-grid">
+        <input type="hidden" id="userIdInput" />
+        <label>
+          <span>Username</span>
+          <input id="usernameInput" type="text" placeholder="e.g. Fahmi" required />
+        </label>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" data-close="userModal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="userSubmitBtn">Save user</button>
         </div>
-        <canvas id="duration-chart" height="90" style="display:none;"></canvas>
-        <table id="log-table">
-          <thead>
-            <tr>
-              <th>Activity</th>
-              <th>Duration</th>
-              <th>Est. calories</th>
-              <th>Date</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="log-body"></tbody>
-        </table>
-      </div>
-
-      <p>
-        <strong>GET user's exercise log: </strong>
-        <code>GET /api/users/:_id/logs?[from][&amp;to][&amp;limit]</code>
-      </p>
-      <p><strong>[ ]</strong> = optional</p>
-      <p><strong>from, to</strong> = dates (yyyy-mm-dd); <strong>limit</strong> = number</p>
+      </form>
     </div>
+  </div>
 
-    <script>
-      // Approx MET (Metabolic Equivalent of Task) values per activity, used only
-      // for a rough client-side calorie estimate. Formula: MET * 3.5 * weightKg / 200 * minutes
-      // Since the app doesn't collect body weight yet, we assume an average 70kg adult.
-      const MET_VALUES = {
-        "Walking": 3.5,
-        "Running": 10,
-        "Cycling": 8,
-        "Swimming": 7,
-        "Weight training": 5,
-        "Yoga": 3,
-        "HIIT/Cardio": 9,
-        "Other": 5
-      };
-      const ASSUMED_WEIGHT_KG = 70;
+  <div id="exerciseModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="exerciseModalTitle">
+    <div class="modal-backdrop" data-close="exerciseModal"></div>
+    <div class="modal-card modal-wide">
+      <div class="modal-head">
+        <div>
+          <span class="eyebrow" id="exerciseModalEyebrow">Add exercise</span>
+          <h3 id="exerciseModalTitle">Create an exercise record</h3>
+        </div>
+        <button class="close-btn" data-close="exerciseModal">×</button>
+      </div>
+      <form id="exerciseForm" class="form-grid two-col">
+        <input type="hidden" id="exerciseIdInput" />
+        <label>
+          <span>Activity</span>
+          <select id="activityInput" required>
+            <option value="" selected disabled>Select activity</option>
+            <option>Walking</option>
+            <option>Running</option>
+            <option>Cycling</option>
+            <option>Swimming</option>
+            <option>Strength training</option>
+            <option>Yoga</option>
+            <option>HIIT</option>
+            <option>Other</option>
+          </select>
+        </label>
+        <label>
+          <span>Minutes</span>
+          <input id="minutesInput" type="number" min="1" step="1" placeholder="30" required />
+        </label>
+        <label>
+          <span>Date</span>
+          <input id="dateInput" type="date" required />
+        </label>
+        <div class="form-actions full-span">
+          <button type="button" class="btn btn-ghost" data-close="exerciseModal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="exerciseSubmitBtn">Save exercise</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
-      function estimateCalories(activity, durationMinutes) {
-        const met = MET_VALUES[activity] ?? MET_VALUES["Other"];
-        const calories = (met * 3.5 * ASSUMED_WEIGHT_KG) / 200 * durationMinutes;
-        return Math.round(calories);
-      }
+  <div id="deleteUserModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="deleteUserTitle">
+    <div class="modal-backdrop" data-close="deleteUserModal"></div>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <span class="eyebrow">Delete user</span>
+          <h3 id="deleteUserTitle">Confirm user deletion</h3>
+        </div>
+        <button class="close-btn" data-close="deleteUserModal">×</button>
+      </div>
+      <p class="modal-text">This will permanently remove the selected user and their data.</p>
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" data-close="deleteUserModal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteUserBtn">Delete user</button>
+      </div>
+    </div>
+  </div>
 
-      const userSelect = document.getElementById("user-select");
-      const createUserBtn = document.getElementById("create-user-btn");
-      const createUserMsg = document.getElementById("create-user-msg");
-      const selectUserMsg = document.getElementById("select-user-msg");
-      const viewLogBtn = document.getElementById("view-log-btn");
-      const deleteUserBtn = document.getElementById("delete-user-btn");
-      const addExerciseBtn = document.getElementById("add-exercise-btn");
-      const addExerciseMsg = document.getElementById("add-exercise-msg");
-      const logCard = document.getElementById("log-card");
-      const logTitle = document.getElementById("log-title");
-      const logStreak = document.getElementById("log-streak");
-      const logBody = document.getElementById("log-body");
-      const durationChartCanvas = document.getElementById("duration-chart");
-      let chartInstance = null;
+  <div id="deleteExerciseModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="deleteExerciseTitle">
+    <div class="modal-backdrop" data-close="deleteExerciseModal"></div>
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <span class="eyebrow">Delete exercise</span>
+          <h3 id="deleteExerciseTitle">Confirm exercise deletion</h3>
+        </div>
+        <button class="close-btn" data-close="deleteExerciseModal">×</button>
+      </div>
+      <p class="modal-text">This activity card will be removed after confirmation.</p>
+      <div class="form-actions">
+        <button type="button" class="btn btn-ghost" data-close="deleteExerciseModal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteExerciseBtn">Delete exercise</button>
+      </div>
+    </div>
+  </div>
 
-      async function refreshUsers(selectId) {
-        userSelect.innerHTML = '<option value="">-- choose a user --</option>';
-        try {
-          const res = await fetch("/api/users");
-          const users = await res.json();
-          users.forEach(u => {
-            const opt = document.createElement("option");
-            opt.value = u._id;
-            opt.textContent = u.username;
-            userSelect.appendChild(opt);
-          });
-          if (selectId) {
-            userSelect.value = selectId;
-          }
-        } catch (err) {
-          console.error(err);
-        }
-      }
-
-      function countThisWeek(log) {
-        const now = new Date();
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay());
-        startOfWeek.setHours(0, 0, 0, 0);
-        return log.filter(e => new Date(e.date) >= startOfWeek).length;
-      }
-
-      function renderChart(log) {
-        if (typeof Chart === "undefined") {
-          durationChartCanvas.style.display = "none";
-          return;
-        }
-        if (chartInstance) {
-          chartInstance.destroy();
-          chartInstance = null;
-        }
-        if (log.length < 3) {
-          durationChartCanvas.style.display = "none";
-          return;
-        }
-        durationChartCanvas.style.display = "block";
-        const sorted = [...log].sort((a, b) => new Date(a.date) - new Date(b.date));
-        chartInstance = new Chart(durationChartCanvas, {
-          type: "line",
-          data: {
-            labels: sorted.map(e => e.date),
-            datasets: [{
-              label: "Est. calories (kcal)",
-              data: sorted.map(e => estimateCalories(e.description, e.duration)),
-              borderWidth: 2,
-              tension: 0.25,
-              fill: false
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true, title: { display: true, text: "Calories (kcal)" } } }
-          }
-        });
-      }
-
-      function renderLog(data) {
-        logCard.style.display = "block";
-        logTitle.textContent = data.username + "'s log (" + data.count + " entries)";
-        const weekCount = countThisWeek(data.log);
-        logStreak.textContent = weekCount + " exercise" + (weekCount === 1 ? "" : "s") + " this week";
-
-        logBody.innerHTML = "";
-        data.log.forEach(entry => {
-          const row = document.createElement("tr");
-          const calories = estimateCalories(entry.description, entry.duration);
-          row.innerHTML = `
-            <td>${entry.description}</td>
-            <td>${entry.duration} min</td>
-            <td>~${calories} kcal</td>
-            <td>${entry.date}</td>
-            <td><button class="danger small delete-exercise-btn" data-id="${entry._id}">Delete</button></td>
-          `;
-          logBody.appendChild(row);
-        });
-
-        document.querySelectorAll(".delete-exercise-btn").forEach(btn => {
-          btn.addEventListener("click", async () => {
-            const userId = userSelect.value;
-            const exerciseId = btn.getAttribute("data-id");
-            if (!userId || !exerciseId) return;
-            try {
-              await fetch(`/api/users/${userId}/exercises/${exerciseId}`, { method: "DELETE" });
-              await loadLog(userId);
-            } catch (err) {
-              console.error(err);
-            }
-          });
-        });
-
-        renderChart(data.log);
-      }
-
-      async function loadLog(userId) {
-        if (!userId) return;
-        try {
-          const res = await fetch(`/api/users/${userId}/logs`);
-          const data = await res.json();
-          renderLog(data);
-        } catch (err) {
-          console.error(err);
-        }
-      }
-
-      createUserBtn.addEventListener("click", async () => {
-        const username = document.getElementById("uname").value.trim();
-        if (!username) {
-          createUserMsg.textContent = "Enter a username first.";
-          return;
-        }
-        try {
-          const res = await fetch("/api/users", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ username })
-          });
-          const user = await res.json();
-          document.getElementById("uname").value = "";
-          createUserMsg.textContent = `Created ${user.username}.`;
-          await refreshUsers(user._id);
-        } catch (err) {
-          createUserMsg.textContent = "Couldn't create user.";
-        }
-      });
-
-      viewLogBtn.addEventListener("click", () => {
-        const userId = userSelect.value;
-        if (!userId) {
-          selectUserMsg.textContent = "Choose a user first.";
-          return;
-        }
-        selectUserMsg.textContent = "";
-        loadLog(userId);
-      });
-
-      deleteUserBtn.addEventListener("click", async () => {
-        const userId = userSelect.value;
-        if (!userId) {
-          selectUserMsg.textContent = "Choose a user first.";
-          return;
-        }
-        try {
-          await fetch(`/api/users/${userId}`, { method: "DELETE" });
-          selectUserMsg.textContent = "User deleted.";
-          logCard.style.display = "none";
-          await refreshUsers();
-        } catch (err) {
-          selectUserMsg.textContent = "Couldn't delete user.";
-        }
-      });
-
-      addExerciseBtn.addEventListener("click", async () => {
-        const userId = userSelect.value;
-        const activity = document.getElementById("activity-select").value;
-        const duration = document.getElementById("duration").value;
-        const date = document.getElementById("date").value;
-
-        if (!userId) {
-          addExerciseMsg.textContent = "Select a user above first.";
-          return;
-        }
-        if (!activity || !duration) {
-          addExerciseMsg.textContent = "Activity and duration are required.";
-          return;
-        }
-
-        try {
-          await fetch(`/api/users/${userId}/exercises`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ description: activity, duration, date })
-          });
-          addExerciseMsg.textContent = "Exercise added.";
-          document.getElementById("duration").value = "";
-          document.getElementById("date").value = "";
-          await loadLog(userId);
-        } catch (err) {
-          addExerciseMsg.textContent = "Couldn't add exercise.";
-        }
-      });
-
-      refreshUsers();
-    </script>
-  </body>
+  <script src="/public/client.js"></script>
+</body>
 </html>
