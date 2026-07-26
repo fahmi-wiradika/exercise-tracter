@@ -1,5 +1,5 @@
-const User = require('./models/user.model.js');
-const Exercise = require('./models/exercise.model.js');
+const User = require('../models/user.model.js');
+const Exercise = require('../models/exercise.model.js');
 
 
 // Get all users info app.get('/api/users',
