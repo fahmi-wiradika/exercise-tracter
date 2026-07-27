@@ -45,6 +45,7 @@ const ICONS = {
   dumbbell: '<path d="M6 9v6M4 10.5v3M20 9v6M22 10.5v3M8 12h8" />',
   yoga: '<circle cx="12" cy="5" r="1.7" /><path d="M12 8v6M12 8 7 12M12 8l5 4M12 14l-4 6M12 14l4 6" />',
   star: '<path d="M12 3l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1L6.6 19l1.3-6-4.6-4.1 6.1-.6z" />',
+  chevronDown: '<path d="M6 9l6 6 6-6" />',
 };
 
 function icon(name, cls) {
@@ -66,7 +67,10 @@ const runnerIllustration = `
 function toDateKey(value) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "";
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 function lastSevenDays() {
@@ -91,8 +95,9 @@ const app = Vue.createApp({
       runnerIllustration,
 
       mobileNavOpen: false,
+      usersExpanded: true,
 
-      modals: { user: false, exercise: false, deleteUser: false, deleteExercise: false },
+      modals: { user: false, exercise: false, deleteUser: false, deleteExercise: false, about: false },
       userForm: { id: null, username: "" },
       exerciseForm: { id: null, activity: "", minutes: "", date: "" },
       deleteUserTarget: null,
@@ -220,6 +225,17 @@ const app = Vue.createApp({
         this.toast_("Add a user to get started");
       }
       this.mobileNavOpen = false;
+    },
+
+    handleActiveUsersClick() {
+      // Clicking the "Active Users" row still navigates like before;
+      // it just also makes sure the user list underneath is visible.
+      this.usersExpanded = true;
+      this.showUsers();
+    },
+
+    openAboutModal() {
+      this.modals.about = true;
     },
 
     async loadUsers() {

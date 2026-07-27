@@ -67,18 +67,33 @@
             <span v-html="icon('home', 'w-[18px] h-[18px]')"></span>
             Dashboard
           </button>
+
           <button
-            @click="showUsers()"
+            @click="openAddUserModal()"
+            class="flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark active:scale-[0.98] transition rounded-xl py-2.5 font-medium text-sm my-1"
+          >
+            <span v-html="icon('plus', 'w-4 h-4')"></span>
+            Add User
+          </button>
+
+          <button
+            @click="handleActiveUsersClick()"
             :class="navItemClass(view === 'workspace')"
           >
             <span v-html="icon('users', 'w-[18px] h-[18px]')"></span>
-            Active Users
+            <span class="flex-1 text-left">Active Users</span>
+            <span
+              @click.stop="usersExpanded = !usersExpanded"
+              class="p-0.5 -mr-1 rounded transition-transform duration-200"
+              :class="usersExpanded ? 'rotate-0' : '-rotate-90'"
+              v-html="icon('chevronDown', 'w-4 h-4')"
+            ></span>
           </button>
         </nav>
 
-        <div class="flex-1 min-h-0 flex flex-col">
-          <span class="text-[11px] uppercase tracking-wider text-white/35 font-semibold px-1 pb-2">Users</span>
-          <div class="flex-1 overflow-y-auto flex flex-col gap-1 pr-1 sidebar-scroll">
+        <div v-show="usersExpanded" class="flex-1 min-h-0 flex flex-col">
+          <span class="text-[11px] uppercase tracking-wider text-white/35 font-semibold px-1 pb-2 pl-8">Users</span>
+          <div class="flex-1 overflow-y-auto flex flex-col gap-1 pr-1 pl-3 sidebar-scroll border-l border-white/10 ml-4">
             <div v-if="!users.length" class="text-white/40 text-sm px-3 py-8 text-center leading-relaxed">
               No users yet.<br />Add one to get started.
             </div>
@@ -98,11 +113,11 @@
         </div>
 
         <button
-          @click="openAddUserModal()"
-          class="flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark active:scale-[0.98] transition rounded-xl py-2.5 font-medium text-sm"
+          @click="openAboutModal()"
+          class="flex items-center justify-center gap-2 border border-white/15 text-white/75 hover:bg-white/5 hover:text-white active:scale-[0.98] transition rounded-xl py-2.5 font-medium text-sm"
         >
-          <span v-html="icon('plus', 'w-4 h-4')"></span>
-          Add User
+          <span v-html="icon('info', 'w-4 h-4')"></span>
+          About
         </button>
       </aside>
 
@@ -122,7 +137,13 @@
                 Your personal companion to track exercises, monitor progress, and achieve your goals.
               </p>
             </div>
-            <div class="justify-self-center sm:justify-self-end" v-html="runnerIllustration"></div>
+            <div class="justify-self-center sm:justify-self-end flex items-center gap-5">
+              <div class="text-right shrink-0">
+                <p class="text-3xl font-extrabold text-brand leading-none">{{ users.length }}</p>
+                <p class="text-xs text-gray-400 mt-1.5 whitespace-nowrap">Active User{{ users.length === 1 ? '' : 's' }}</p>
+              </div>
+              <div v-html="runnerIllustration"></div>
+            </div>
           </div>
 
           <div>
@@ -407,6 +428,31 @@
         <div class="flex justify-center gap-2 mt-6">
           <button @click="closeModal('deleteExercise')" class="px-4 py-2 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition">Cancel</button>
           <button @click="confirmDeleteExercise" class="px-4 py-2 rounded-xl text-sm font-medium bg-red-500 hover:bg-red-600 text-white transition">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ MODAL: About ============ -->
+    <div v-if="modals.about" class="fixed inset-0 z-50 grid place-items-center p-4">
+      <div class="absolute inset-0 bg-black/40" @click="closeModal('about')"></div>
+      <div class="relative bg-white rounded-2xl shadow-card w-full max-w-sm p-6">
+        <div class="flex items-center justify-between mb-5">
+          <h3 class="font-bold text-lg">About</h3>
+          <button @click="closeModal('about')" class="text-gray-400 hover:text-ink p-1 -mt-1 -mr-1">
+            <span v-html="icon('x', 'w-5 h-5')"></span>
+          </button>
+        </div>
+
+        <div class="flex justify-center mb-5">
+          <span class="inline-flex items-center gap-2 bg-brand-light text-brand font-bold text-sm px-4 py-2 rounded-full">
+            <span v-html="icon('dumbbell', 'w-4 h-4')"></span>
+            Exercise Tracker
+          </span>
+        </div>
+
+        <div class="bg-bgapp rounded-xl p-4 text-center text-sm text-ink/80 leading-relaxed">
+          A freeCodeCamp Exercise Tracker project reimagined by <strong class="text-ink">Fahmi Wahyu Wiradika</strong> &mdash;
+          visual design crafted with <strong class="text-ink">ChatGPT</strong>, frontend implementation coded with <strong class="text-ink">Claude</strong>.
         </div>
       </div>
     </div>
