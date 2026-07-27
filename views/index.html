@@ -7,230 +7,459 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/public/style.css" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          colors: {
+            ink: '#1E1B34',
+            ink2: '#292552',
+            brand: { DEFAULT: '#5B4FE9', dark: '#4A3FD1', light: '#EEF0FF' },
+            bgapp: '#F5F6FB',
+          },
+          boxShadow: {
+            card: '0 1px 2px rgba(16,24,40,0.06), 0 8px 24px -8px rgba(16,24,40,0.10)',
+          },
+        },
+      },
+    };
+  </script>
+
+  <link rel="stylesheet" href="/style.css" />
 </head>
-<body>
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">ET</div>
-        <div>
-          <h1>Exercise Tracker</h1>
-          <p>Daily activity insight</p>
-        </div>
+<body class="bg-bgapp text-ink font-sans antialiased">
+
+  <div id="app" v-cloak>
+
+    <!-- Mobile top bar -->
+    <header class="lg:hidden flex items-center justify-between px-4 py-3 bg-ink text-white sticky top-0 z-40 shadow-card">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand to-indigo-400 grid place-items-center font-extrabold text-xs">ET</div>
+        <span class="font-semibold text-[15px]">Exercise Tracker</span>
       </div>
+      <button @click="mobileNavOpen = !mobileNavOpen" class="p-2 -mr-2 rounded-lg hover:bg-white/10" aria-label="Toggle menu">
+        <span v-html="icon(mobileNavOpen ? 'x' : 'menu', 'w-6 h-6')"></span>
+      </button>
+    </header>
 
-      <section class="sidebar-section">
-        <div class="section-head">
-          <span class="eyebrow">Overview</span>
-          <h2>What this app does</h2>
-        </div>
-        <p class="muted">
-          Record activities, track minutes, and review weekly calorie insights for each user.
-        </p>
-        <button class="btn btn-primary full" id="openAddUserBtn">+ Add user</button>
-      </section>
+    <div class="lg:flex lg:min-h-screen">
 
-      <section class="sidebar-section">
-        <div class="section-head">
-          <span class="eyebrow">Active users</span>
-          <h2>Select a user</h2>
-        </div>
-        <div id="userList" class="user-list"></div>
-      </section>
-    </aside>
-
-    <main class="main">
-      <section class="hero-card">
-        <div>
-          <span class="eyebrow">Dashboard</span>
-          <h2>Exercise tracking with clear insight</h2>
-          <p>
-            Choose a user to record exercise activity, view the weekly trend, and understand how much energy is spent over time.
-          </p>
-        </div>
-        <div class="hero-actions">
-          <div class="hero-stat">
-            <span class="hero-stat-label">Users</span>
-            <strong id="totalUsers">0</strong>
-          </div>
-          <div class="hero-stat">
-            <span class="hero-stat-label">Activities</span>
-            <strong id="totalExercises">0</strong>
-          </div>
-          <div class="hero-stat">
-            <span class="hero-stat-label">Selected user</span>
-            <strong id="selectedUserLabel">None</strong>
-          </div>
-        </div>
-      </section>
-
-      <section id="overviewPanel" class="overview-grid">
-        <article class="info-card">
-          <span class="eyebrow">General information</span>
-          <h3>Track what matters</h3>
-          <p>Log exercise by activity type, duration, and date. The app then summarizes activity volume and calorie output.</p>
-        </article>
-        <article class="info-card">
-          <span class="eyebrow">Graph insight</span>
-          <h3>Weekly calories per day</h3>
-          <p>The graph shows calories spent by date. When data is small, the app explains that more exercise records are needed for insight.</p>
-        </article>
-        <article class="info-card">
-          <span class="eyebrow">Workflow</span>
-          <h3>Select, record, review</h3>
-          <p>Pick a user from the sidebar, add exercise from the selected-user page, then review activity cards and graph results.</p>
-        </article>
-      </section>
-
-      <section id="userWorkspace" class="workspace hidden">
-        <header class="workspace-header">
+      <!-- Sidebar -->
+      <aside
+        :class="['bg-ink text-white w-full lg:w-[280px] lg:shrink-0 lg:min-h-screen lg:sticky lg:top-0 lg:flex flex-col p-5 gap-5 z-30', mobileNavOpen ? 'flex' : 'hidden']"
+      >
+        <div class="hidden lg:flex items-center gap-3 pb-5 border-b border-white/10">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-indigo-400 grid place-items-center font-extrabold text-sm">ET</div>
           <div>
-            <span class="eyebrow">Selected user</span>
-            <div class="title-row">
-              <h2 id="workspaceUserName">User</h2>
-              <button class="icon-btn" id="editUserBtn" title="Edit username">Edit</button>
-              <button class="icon-btn danger" id="deleteUserBtn" title="Delete user">Delete</button>
-            </div>
-            <p id="workspaceUserMeta" class="muted">No user selected</p>
+            <h1 class="font-semibold text-[15px] leading-tight">Exercise Tracker</h1>
+            <p class="text-[11px] text-white/40 leading-tight mt-0.5">Fitness dashboard</p>
           </div>
-          <div class="workspace-actions">
-            <button class="btn btn-secondary" id="openAddExerciseBtn">+ Add exercise</button>
+        </div>
+
+        <nav class="flex flex-col gap-1">
+          <button
+            @click="showDashboard()"
+            :class="navItemClass(view === 'dashboard')"
+          >
+            <span v-html="icon('home', 'w-[18px] h-[18px]')"></span>
+            Dashboard
+          </button>
+
+          <button
+            @click="openAddUserModal()"
+            class="flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark active:scale-[0.98] transition rounded-xl py-2.5 font-medium text-sm my-1"
+          >
+            <span v-html="icon('plus', 'w-4 h-4')"></span>
+            Add User
+          </button>
+
+          <button
+            @click="handleActiveUsersClick()"
+            :class="navItemClass(view === 'workspace')"
+          >
+            <span v-html="icon('users', 'w-[18px] h-[18px]')"></span>
+            <span class="flex-1 text-left">Active Users</span>
+            <span
+              @click.stop="usersExpanded = !usersExpanded"
+              class="p-0.5 -mr-1 rounded transition-transform duration-200"
+              :class="usersExpanded ? 'rotate-0' : '-rotate-90'"
+              v-html="icon('chevronDown', 'w-4 h-4')"
+            ></span>
+          </button>
+        </nav>
+
+        <div v-show="usersExpanded" class="flex-1 min-h-0 flex flex-col">
+          <span class="text-[11px] uppercase tracking-wider text-white/35 font-semibold px-1 pb-2 pl-8">Users</span>
+          <div class="flex-1 overflow-y-auto flex flex-col gap-1 pr-1 pl-3 sidebar-scroll border-l border-white/10 ml-4">
+            <div v-if="!users.length" class="text-white/40 text-sm px-3 py-8 text-center leading-relaxed">
+              No users yet.<br />Add one to get started.
+            </div>
+            <button
+              v-for="u in users"
+              :key="u._id"
+              @click="selectUser(u)"
+              :class="['flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left transition', selectedUserId === u._id ? 'bg-brand text-white shadow-card' : 'text-white/65 hover:bg-white/5 hover:text-white']"
+            >
+              <span
+                class="w-7 h-7 shrink-0 rounded-full grid place-items-center text-[11px] font-bold"
+                :class="selectedUserId === u._id ? 'bg-white/20' : 'bg-white/10 text-white/70'"
+              >{{ initials(u.username) }}</span>
+              <span class="truncate">{{ u.username }}</span>
+            </button>
           </div>
-        </header>
+        </div>
 
-        <section class="workspace-grid">
-          <article class="panel">
-            <div class="panel-head">
-              <div>
-                <span class="eyebrow">Activity cards</span>
-                <h3>Recorded exercises</h3>
-              </div>
-              <div class="panel-meta" id="activitySummary">0 items</div>
-            </div>
-            <div id="activityList" class="activity-list"></div>
-          </article>
+        <button
+          @click="openAboutModal()"
+          class="flex items-center justify-center gap-2 border border-white/15 text-white/75 hover:bg-white/5 hover:text-white active:scale-[0.98] transition rounded-xl py-2.5 font-medium text-sm"
+        >
+          <span v-html="icon('info', 'w-4 h-4')"></span>
+          About
+        </button>
+      </aside>
 
-          <article class="panel">
-            <div class="panel-head">
-              <div>
-                <span class="eyebrow">Graph</span>
-                <h3>Calories spent per day</h3>
-              </div>
-              <div class="panel-meta" id="graphRange">This week</div>
+      <!-- Backdrop for mobile nav -->
+      <div v-if="mobileNavOpen" @click="mobileNavOpen = false" class="fixed inset-0 bg-black/40 z-20 lg:hidden"></div>
+
+      <!-- Main content -->
+      <main class="flex-1 min-w-0 p-4 sm:p-6 lg:p-8">
+
+        <!-- ============ DASHBOARD OVERVIEW ============ -->
+        <section v-if="view === 'dashboard'" class="max-w-5xl mx-auto flex flex-col gap-6">
+
+          <div class="bg-white rounded-3xl shadow-card p-6 sm:p-8 grid sm:grid-cols-[1fr_auto] gap-6 items-center">
+            <div>
+              <h2 class="text-2xl sm:text-[28px] font-extrabold tracking-tight">Welcome to Exercise Tracker</h2>
+              <p class="text-gray-500 mt-2 leading-relaxed max-w-md">
+                Your personal companion to track exercises, monitor progress, and achieve your goals.
+              </p>
             </div>
-            <div id="graphMessage" class="graph-message hidden"></div>
-            <canvas id="calorieChart" width="720" height="420" aria-label="Exercise calories chart"></canvas>
-          </article>
+            <div class="justify-self-center sm:justify-self-end flex items-center gap-5">
+              <div class="text-right shrink-0">
+                <p class="text-3xl font-extrabold text-brand leading-none">{{ users.length }}</p>
+                <p class="text-xs text-gray-400 mt-1.5 whitespace-nowrap">Active User{{ users.length === 1 ? '' : 's' }}</p>
+              </div>
+              <div v-html="runnerIllustration"></div>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="font-semibold text-sm text-gray-500 mb-3 px-1">What can you do?</h3>
+            <div class="grid sm:grid-cols-3 gap-4">
+              <div class="bg-white rounded-2xl shadow-card p-5">
+                <div class="w-10 h-10 rounded-xl bg-green-100 text-green-600 grid place-items-center mb-3" v-html="icon('run', 'w-5 h-5')"></div>
+                <h4 class="font-semibold text-[15px]">Record Exercises</h4>
+                <p class="text-sm text-gray-500 mt-1 leading-relaxed">Log various activities with duration and date easily.</p>
+              </div>
+              <div class="bg-white rounded-2xl shadow-card p-5">
+                <div class="w-10 h-10 rounded-xl bg-brand-light text-brand grid place-items-center mb-3" v-html="icon('chart', 'w-5 h-5')"></div>
+                <h4 class="font-semibold text-[15px]">Track Progress</h4>
+                <p class="text-sm text-gray-500 mt-1 leading-relaxed">View your activities in detail and analyze your consistency.</p>
+              </div>
+              <div class="bg-white rounded-2xl shadow-card p-5">
+                <div class="w-10 h-10 rounded-xl bg-orange-100 text-orange-500 grid place-items-center mb-3" v-html="icon('flame', 'w-5 h-5')"></div>
+                <h4 class="font-semibold text-[15px]">Get Insights</h4>
+                <p class="text-sm text-gray-500 mt-1 leading-relaxed">Understand your calories burned over time with visual charts.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl shadow-card p-5">
+            <h3 class="font-semibold text-sm text-gray-500 mb-3">Activities you can record</h3>
+            <div class="flex flex-wrap gap-2">
+              <span v-for="a in activityTypes" :key="a" class="px-3 py-1.5 rounded-full bg-bgapp text-sm text-ink font-medium">{{ a }}</span>
+              <span class="px-3 py-1.5 rounded-full bg-bgapp text-sm text-gray-400 font-medium">And more!</span>
+            </div>
+          </div>
+
+          <div class="bg-brand-light rounded-2xl p-5 flex items-start gap-3">
+            <span class="text-brand shrink-0 mt-0.5" v-html="icon('chart', 'w-5 h-5')"></span>
+            <p class="text-sm text-ink/80 leading-relaxed">
+              <strong class="text-ink">The graph shows your total calories burned per day.</strong>
+              The more you record, the better the insights!
+            </p>
+          </div>
         </section>
-      </section>
-    </main>
-  </div>
 
-  <div id="toast" class="toast" aria-live="polite"></div>
+        <!-- ============ USER WORKSPACE ============ -->
+        <section v-else-if="view === 'workspace' && selectedUser" class="max-w-6xl mx-auto flex flex-col gap-6">
 
-  <div id="userModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="userModalTitle">
-    <div class="modal-backdrop" data-close="userModal"></div>
-    <div class="modal-card">
-      <div class="modal-head">
-        <div>
-          <span class="eyebrow" id="userModalEyebrow">Add user</span>
-          <h3 id="userModalTitle">Create a new user</h3>
-        </div>
-        <button class="close-btn" data-close="userModal">×</button>
-      </div>
-      <form id="userForm" class="form-grid">
-        <input type="hidden" id="userIdInput" />
-        <label>
-          <span>Username</span>
-          <input id="usernameInput" type="text" placeholder="e.g. Fahmi" required />
-        </label>
-        <div class="form-actions">
-          <button type="button" class="btn btn-ghost" data-close="userModal">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="userSubmitBtn">Save user</button>
-        </div>
-      </form>
+          <header class="bg-white rounded-2xl shadow-card p-5 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-11 h-11 rounded-full bg-brand-light text-brand grid place-items-center font-bold shrink-0">
+                {{ initials(selectedUser.username) }}
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <h2 class="font-bold text-lg truncate">{{ selectedUser.username }}</h2>
+                  <button @click="openEditUserModal()" class="text-gray-400 hover:text-brand transition p-1" title="Edit username">
+                    <span v-html="icon('edit', 'w-4 h-4')"></span>
+                  </button>
+                </div>
+                <p class="text-xs text-gray-400">User ID: {{ selectedUser._id }}</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <button @click="openAddExerciseModal()" class="flex items-center gap-1.5 bg-brand hover:bg-brand-dark transition text-white rounded-xl px-4 py-2 text-sm font-medium">
+                <span v-html="icon('plus', 'w-4 h-4')"></span> Add Exercise
+              </button>
+              <button @click="openDeleteUserModal()" class="flex items-center gap-1.5 border border-red-200 text-red-500 hover:bg-red-50 transition rounded-xl px-4 py-2 text-sm font-medium">
+                <span v-html="icon('trash', 'w-4 h-4')"></span> Delete User
+              </button>
+            </div>
+          </header>
+
+          <div class="grid lg:grid-cols-[1fr_360px] gap-6 items-start">
+
+            <!-- Activity cards -->
+            <div class="bg-white rounded-2xl shadow-card p-5">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold">Your Activities</h3>
+                <span class="text-xs text-gray-400">{{ logs.length }} item{{ logs.length === 1 ? '' : 's' }}</span>
+              </div>
+
+              <div v-if="!logs.length" class="text-center py-12 text-gray-400">
+                <p class="font-medium text-ink/70">No activity recorded yet</p>
+                <p class="text-sm mt-1">Use <strong>Add Exercise</strong> to create the first activity card.</p>
+              </div>
+
+              <div class="flex flex-col gap-3">
+                <div
+                  v-for="entry in sortedLogs"
+                  :key="entry._id"
+                  class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-gray-200 transition"
+                >
+                  <div class="w-10 h-10 rounded-xl grid place-items-center shrink-0" :class="activityMeta(entry.description).bg">
+                    <span :class="activityMeta(entry.description).fg" v-html="icon(activityMeta(entry.description).icon, 'w-5 h-5')"></span>
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="font-semibold text-sm truncate">{{ entry.description }}</p>
+                    <p class="text-xs text-gray-400">{{ entry.duration }} min &middot; {{ formatDate(entry.date) }}</p>
+                  </div>
+                  <div class="text-right shrink-0 hidden sm:block">
+                    <p class="text-xs text-gray-400">Est. {{ Math.round(estimateCalories(entry.description, entry.duration)) }} kcal</p>
+                  </div>
+                  <div class="flex items-center gap-1 shrink-0">
+                    <button @click="openEditExerciseModal(entry)" class="p-1.5 text-gray-400 hover:text-brand transition" title="Edit activity">
+                      <span v-html="icon('edit', 'w-4 h-4')"></span>
+                    </button>
+                    <button @click="openDeleteExerciseModal(entry)" class="p-1.5 text-gray-400 hover:text-red-500 transition" title="Delete activity">
+                      <span v-html="icon('trash', 'w-4 h-4')"></span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <p v-if="logs.length" class="text-xs text-gray-400 mt-4 flex items-center gap-1.5">
+                <span v-html="icon('info', 'w-3.5 h-3.5')"></span> Click edit to update activity details.
+              </p>
+            </div>
+
+            <!-- Graph + insight -->
+            <div class="flex flex-col gap-4">
+              <div class="bg-white rounded-2xl shadow-card p-5">
+                <h3 class="font-semibold mb-1">Calories Burned <span class="text-gray-400 font-normal text-sm">(This Week)</span></h3>
+
+                <div v-if="!weekHasEnoughData" class="py-8 text-center">
+                  <div class="w-12 h-12 rounded-2xl bg-brand-light text-brand grid place-items-center mx-auto mb-3" v-html="icon('chart', 'w-6 h-6')"></div>
+                  <p class="font-semibold text-ink/80 text-sm">Do and record more exercise for insight</p>
+                  <p class="text-xs text-gray-400 mt-1.5 leading-relaxed">Add at least 3 activities within this week to see your progress.</p>
+                </div>
+
+                <div v-else class="relative">
+                  <canvas ref="chartCanvas" class="w-full" height="220"></canvas>
+                  <div
+                    v-if="hoverTooltip"
+                    class="absolute -translate-x-1/2 -translate-y-full bg-ink text-white text-xs rounded-lg px-3 py-2 pointer-events-none shadow-card whitespace-nowrap"
+                    :style="{ left: hoverTooltip.x + 'px', top: hoverTooltip.y + 'px' }"
+                  >
+                    <div class="font-semibold">{{ hoverTooltip.label }}</div>
+                    <div class="text-white/70">{{ hoverTooltip.value }} kcal</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white rounded-2xl shadow-card p-4">
+                  <p class="text-xs text-gray-400">Total Calories</p>
+                  <p class="font-extrabold text-xl mt-1">{{ totalCalories.toLocaleString() }} <span class="text-xs font-medium text-gray-400">kcal</span></p>
+                </div>
+                <div class="bg-white rounded-2xl shadow-card p-4">
+                  <p class="text-xs text-gray-400">Total Exercises</p>
+                  <p class="font-extrabold text-xl mt-1">{{ logs.length }}</p>
+                </div>
+              </div>
+
+              <div class="bg-brand-light rounded-2xl p-4 flex items-start gap-2.5">
+                <span class="mt-0.5">{{ motivationEmoji }}</span>
+                <p class="text-sm text-ink/80 leading-relaxed">{{ motivationMessage }}</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
-  </div>
 
-  <div id="exerciseModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="exerciseModalTitle">
-    <div class="modal-backdrop" data-close="exerciseModal"></div>
-    <div class="modal-card modal-wide">
-      <div class="modal-head">
-        <div>
-          <span class="eyebrow" id="exerciseModalEyebrow">Add exercise</span>
-          <h3 id="exerciseModalTitle">Create an exercise record</h3>
-        </div>
-        <button class="close-btn" data-close="exerciseModal">×</button>
-      </div>
-      <form id="exerciseForm" class="form-grid two-col">
-        <input type="hidden" id="exerciseIdInput" />
-        <label>
-          <span>Activity</span>
-          <select id="activityInput" required>
-            <option value="" selected disabled>Select activity</option>
-            <option>Walking</option>
-            <option>Running</option>
-            <option>Cycling</option>
-            <option>Swimming</option>
-            <option>Strength training</option>
-            <option>Yoga</option>
-            <option>HIIT</option>
-            <option>Other</option>
-          </select>
-        </label>
-        <label>
-          <span>Minutes</span>
-          <input id="minutesInput" type="number" min="1" step="1" placeholder="30" required />
-        </label>
-        <label>
-          <span>Date</span>
-          <input id="dateInput" type="date" required />
-        </label>
-        <div class="form-actions full-span">
-          <button type="button" class="btn btn-ghost" data-close="exerciseModal">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="exerciseSubmitBtn">Save exercise</button>
-        </div>
-      </form>
+    <!-- Toast -->
+    <div class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-ink text-white text-sm px-4 py-2.5 rounded-xl shadow-card z-50 transition-all duration-200"
+         :class="toast.show ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'">
+      {{ toast.message }}
     </div>
-  </div>
 
-  <div id="deleteUserModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="deleteUserTitle">
-    <div class="modal-backdrop" data-close="deleteUserModal"></div>
-    <div class="modal-card">
-      <div class="modal-head">
-        <div>
-          <span class="eyebrow">Delete user</span>
-          <h3 id="deleteUserTitle">Confirm user deletion</h3>
+    <!-- ============ MODAL: Add / Edit User ============ -->
+    <div v-if="modals.user" class="fixed inset-0 z-50 grid place-items-center p-4">
+      <div class="absolute inset-0 bg-black/40" @click="closeModal('user')"></div>
+      <div class="relative bg-white rounded-2xl shadow-card w-full max-w-sm p-6">
+        <div class="flex items-start justify-between mb-5">
+          <div>
+            <span class="text-xs font-semibold text-brand uppercase tracking-wide">{{ userForm.id ? 'Edit user' : 'Add user' }}</span>
+            <h3 class="font-bold text-lg mt-0.5">{{ userForm.id ? 'Edit Username' : 'Add New User' }}</h3>
+          </div>
+          <button @click="closeModal('user')" class="text-gray-400 hover:text-ink p-1 -mt-1 -mr-1">
+            <span v-html="icon('x', 'w-5 h-5')"></span>
+          </button>
         </div>
-        <button class="close-btn" data-close="deleteUserModal">×</button>
-      </div>
-      <p class="modal-text">This will permanently remove the selected user and their data.</p>
-      <div class="form-actions">
-        <button type="button" class="btn btn-ghost" data-close="deleteUserModal">Cancel</button>
-        <button type="button" class="btn btn-danger" id="confirmDeleteUserBtn">Delete user</button>
+
+        <div v-if="!userForm.id" class="w-16 h-16 rounded-full bg-brand-light text-brand grid place-items-center mx-auto mb-5" v-html="icon('userPlus', 'w-7 h-7')"></div>
+
+        <form @submit.prevent="submitUserForm">
+          <label class="block text-sm font-medium text-gray-600 mb-1.5">Username</label>
+          <input
+            v-model.trim="userForm.username"
+            ref="usernameInput"
+            type="text"
+            placeholder="Enter username"
+            required
+            class="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand"
+          />
+          <div class="flex justify-end gap-2 mt-6">
+            <button type="button" @click="closeModal('user')" class="px-4 py-2 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition">Cancel</button>
+            <button type="submit" class="px-4 py-2 rounded-xl text-sm font-medium bg-brand hover:bg-brand-dark text-white transition">{{ userForm.id ? 'Save Changes' : 'Save User' }}</button>
+          </div>
+        </form>
       </div>
     </div>
-  </div>
 
-  <div id="deleteExerciseModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="deleteExerciseTitle">
-    <div class="modal-backdrop" data-close="deleteExerciseModal"></div>
-    <div class="modal-card">
-      <div class="modal-head">
-        <div>
-          <span class="eyebrow">Delete exercise</span>
-          <h3 id="deleteExerciseTitle">Confirm exercise deletion</h3>
+    <!-- ============ MODAL: Add / Edit Exercise ============ -->
+    <div v-if="modals.exercise" class="fixed inset-0 z-50 grid place-items-center p-4">
+      <div class="absolute inset-0 bg-black/40" @click="closeModal('exercise')"></div>
+      <div class="relative bg-white rounded-2xl shadow-card w-full max-w-sm p-6">
+        <div class="flex items-start justify-between mb-5">
+          <div>
+            <span class="text-xs font-semibold text-brand uppercase tracking-wide">{{ exerciseForm.id ? 'Edit exercise' : 'Add exercise' }}</span>
+            <h3 class="font-bold text-lg mt-0.5">{{ exerciseForm.id ? 'Edit Exercise' : 'Add Exercise' }}</h3>
+          </div>
+          <button @click="closeModal('exercise')" class="text-gray-400 hover:text-ink p-1 -mt-1 -mr-1">
+            <span v-html="icon('x', 'w-5 h-5')"></span>
+          </button>
         </div>
-        <button class="close-btn" data-close="deleteExerciseModal">×</button>
-      </div>
-      <p class="modal-text">This activity card will be removed after confirmation.</p>
-      <div class="form-actions">
-        <button type="button" class="btn btn-ghost" data-close="deleteExerciseModal">Cancel</button>
-        <button type="button" class="btn btn-danger" id="confirmDeleteExerciseBtn">Delete exercise</button>
+
+        <form @submit.prevent="submitExerciseForm" class="flex flex-col gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1.5">Activity</label>
+            <select v-model="exerciseForm.activity" required class="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand bg-white">
+              <option value="" disabled>Select activity</option>
+              <option v-for="a in activityTypes" :key="a" :value="a">{{ a }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1.5">Minutes</label>
+            <div class="relative">
+              <input v-model.number="exerciseForm.minutes" type="number" min="1" step="1" placeholder="Enter minutes" required
+                class="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand" />
+              <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-gray-400">min</span>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">Must be a positive number.</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-600 mb-1.5">Date</label>
+            <input v-model="exerciseForm.date" type="date" required
+              class="w-full rounded-xl border border-gray-200 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand/40 focus:border-brand" />
+          </div>
+          <p v-if="exerciseForm.id" class="text-xs text-gray-400 -mt-1">Update only changed fields.</p>
+
+          <div class="flex justify-end gap-2 mt-2">
+            <button type="button" @click="closeModal('exercise')" class="px-4 py-2 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition">Cancel</button>
+            <button type="submit" class="px-4 py-2 rounded-xl text-sm font-medium bg-brand hover:bg-brand-dark text-white transition">{{ exerciseForm.id ? 'Update Exercise' : 'Add Exercise' }}</button>
+          </div>
+        </form>
       </div>
     </div>
+
+    <!-- ============ MODAL: Delete User confirmation ============ -->
+    <div v-if="modals.deleteUser" class="fixed inset-0 z-50 grid place-items-center p-4">
+      <div class="absolute inset-0 bg-black/40" @click="closeModal('deleteUser')"></div>
+      <div class="relative bg-white rounded-2xl shadow-card w-full max-w-sm p-6 text-center">
+        <button @click="closeModal('deleteUser')" class="absolute right-4 top-4 text-gray-400 hover:text-ink p-1">
+          <span v-html="icon('x', 'w-5 h-5')"></span>
+        </button>
+        <div class="w-14 h-14 rounded-full bg-red-50 text-red-500 grid place-items-center mx-auto mb-4" v-html="icon('userX', 'w-6 h-6')"></div>
+        <h3 class="font-bold text-lg">Delete User</h3>
+        <p class="text-sm text-gray-500 mt-2 leading-relaxed">
+          Are you sure you want to delete user "{{ deleteUserTarget?.username }}"?<br />
+          This will also delete all their exercises.
+        </p>
+        <div class="flex justify-center gap-2 mt-6">
+          <button @click="closeModal('deleteUser')" class="px-4 py-2 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition">Cancel</button>
+          <button @click="confirmDeleteUser" class="px-4 py-2 rounded-xl text-sm font-medium bg-red-500 hover:bg-red-600 text-white transition">Delete User</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ MODAL: Delete Exercise confirmation ============ -->
+    <div v-if="modals.deleteExercise" class="fixed inset-0 z-50 grid place-items-center p-4">
+      <div class="absolute inset-0 bg-black/40" @click="closeModal('deleteExercise')"></div>
+      <div class="relative bg-white rounded-2xl shadow-card w-full max-w-sm p-6 text-center">
+        <button @click="closeModal('deleteExercise')" class="absolute right-4 top-4 text-gray-400 hover:text-ink p-1">
+          <span v-html="icon('x', 'w-5 h-5')"></span>
+        </button>
+        <div class="w-14 h-14 rounded-full bg-red-50 text-red-500 grid place-items-center mx-auto mb-4" v-html="icon('trash', 'w-6 h-6')"></div>
+        <h3 class="font-bold text-lg">Delete Exercise</h3>
+        <p class="text-sm text-gray-500 mt-2">Are you sure you want to delete this exercise?</p>
+
+        <div v-if="deleteExerciseTarget" class="bg-bgapp rounded-xl p-3 mt-4 text-left">
+          <p class="font-semibold text-sm">{{ deleteExerciseTarget.description }}</p>
+          <p class="text-xs text-gray-400 mt-0.5">{{ deleteExerciseTarget.duration }} min &middot; {{ formatDate(deleteExerciseTarget.date) }}</p>
+        </div>
+
+        <div class="flex justify-center gap-2 mt-6">
+          <button @click="closeModal('deleteExercise')" class="px-4 py-2 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition">Cancel</button>
+          <button @click="confirmDeleteExercise" class="px-4 py-2 rounded-xl text-sm font-medium bg-red-500 hover:bg-red-600 text-white transition">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ MODAL: About ============ -->
+    <div v-if="modals.about" class="fixed inset-0 z-50 grid place-items-center p-4">
+      <div class="absolute inset-0 bg-black/40" @click="closeModal('about')"></div>
+      <div class="relative bg-white rounded-2xl shadow-card w-full max-w-sm p-6">
+        <div class="flex items-center justify-between mb-5">
+          <h3 class="font-bold text-lg">About</h3>
+          <button @click="closeModal('about')" class="text-gray-400 hover:text-ink p-1 -mt-1 -mr-1">
+            <span v-html="icon('x', 'w-5 h-5')"></span>
+          </button>
+        </div>
+
+        <div class="flex justify-center mb-5">
+          <span class="inline-flex items-center gap-2 bg-brand-light text-brand font-bold text-sm px-4 py-2 rounded-full">
+            <span v-html="icon('dumbbell', 'w-4 h-4')"></span>
+            Exercise Tracker
+          </span>
+        </div>
+
+        <div class="bg-bgapp rounded-xl p-4 text-center text-sm text-ink/80 leading-relaxed">
+          A freeCodeCamp Exercise Tracker project reimagined by <strong class="text-ink">Fahmi Wahyu Wiradika</strong> &mdash;
+          visual design crafted with <strong class="text-ink">ChatGPT</strong>, frontend implementation coded with <strong class="text-ink">Claude</strong>.
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <script src="/public/client.js"></script>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="/app.js"></script>
 </body>
 </html>
