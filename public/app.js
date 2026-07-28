@@ -46,6 +46,8 @@ const ICONS = {
   yoga: '<circle cx="12" cy="5" r="1.7" /><path d="M12 8v6M12 8 7 12M12 8l5 4M12 14l-4 6M12 14l4 6" />',
   star: '<path d="M12 3l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1L6.6 19l1.3-6-4.6-4.1 6.1-.6z" />',
   chevronDown: '<path d="M6 9l6 6 6-6" />',
+  sun: '<circle cx="12" cy="12" r="4" /><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8" />',
+  moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5z" />',
 };
 
 function icon(name, cls) {
@@ -84,6 +86,18 @@ function lastSevenDays() {
   return days;
 }
 
+// Static example data shown on the dashboard preview chart before any user is selected.
+// Not tied to any real user or API data — purely illustrative.
+const DASHBOARD_MOCK_WEEK = [
+  { label: "Mon", calories: 0 },
+  { label: "Tue", calories: 420 },
+  { label: "Wed", calories: 0 },
+  { label: "Thu", calories: 540 },
+  { label: "Fri", calories: 190 },
+  { label: "Sat", calories: 230 },
+  { label: "Sun", calories: 0 },
+];
+
 const app = Vue.createApp({
   data() {
     return {
@@ -95,7 +109,8 @@ const app = Vue.createApp({
       runnerIllustration,
 
       mobileNavOpen: false,
-      usersExpanded: true,
+      usersExpanded: false,
+      darkMode: false,
 
       modals: { user: false, exercise: false, deleteUser: false, deleteExercise: false, about: false },
       userForm: { id: null, username: "" },
@@ -158,9 +173,11 @@ const app = Vue.createApp({
   },
 
   mounted() {
+    this.initTheme();
     this.loadUsers();
     window.addEventListener("resize", this.handleResize);
     document.addEventListener("keydown", this.handleKeydown);
+    this.$nextTick(() => this.drawDashboardChart());
   },
   beforeUnmount() {
     window.removeEventListener("resize", this.handleResize);
@@ -170,6 +187,22 @@ const app = Vue.createApp({
   methods: {
     icon,
 
+    initTheme() {
+      const stored = localStorage.getItem("theme");
+      this.darkMode = stored ? stored === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+      document.documentElement.classList.toggle("dark", this.darkMode);
+    },
+
+    toggleTheme() {
+      this.darkMode = !this.darkMode;
+      document.documentElement.classList.toggle("dark", this.darkMode);
+      localStorage.setItem("theme", this.darkMode ? "dark" : "light");
+      this.$nextTick(() => {
+        this.drawDashboardChart();
+        if (this.view === "workspace" && this.weekHasEnoughData) this.drawChart();
+      });
+    },
+
     initials(name) {
       if (!name) return "?";
       const parts = String(name).trim().split(/\s+/);
@@ -178,7 +211,7 @@ const app = Vue.createApp({
 
     navItemClass(active) {
       return [
-        "flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition text-left",
+        "flex items-center justify-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition text-center",
         active ? "bg-brand text-white" : "text-white/65 hover:bg-white/5 hover:text-white",
       ];
     },
@@ -201,6 +234,7 @@ const app = Vue.createApp({
     },
 
     handleResize() {
+      if (this.view === "dashboard") this.drawDashboardChart();
       if (this.view === "workspace" && this.weekHasEnoughData) this.drawChart();
     },
 
@@ -213,25 +247,14 @@ const app = Vue.createApp({
     showDashboard() {
       this.view = "dashboard";
       this.mobileNavOpen = false;
+      this.$nextTick(() => this.drawDashboardChart());
     },
 
-    showUsers() {
-      if (this.selectedUser) {
-        this.view = "workspace";
-      } else if (this.users.length) {
-        this.selectUser(this.users[0]);
-      } else {
-        this.view = "dashboard";
-        this.toast_("Add a user to get started");
-      }
-      this.mobileNavOpen = false;
-    },
-
-    handleActiveUsersClick() {
-      // Clicking the "Active Users" row still navigates like before;
-      // it just also makes sure the user list underneath is visible.
-      this.usersExpanded = true;
-      this.showUsers();
+    toggleActiveUsers() {
+      // Per UX requirement: clicking "Active Users" only expands/collapses the
+      // list underneath and stays on whatever page the user is already on.
+      // Only clicking an individual user (selectUser) switches to the workspace.
+      this.usersExpanded = !this.usersExpanded;
     },
 
     openAboutModal() {
@@ -242,14 +265,15 @@ const app = Vue.createApp({
       try {
         const res = await fetch(API.users);
         this.users = await res.json();
-        if (this.selectedUserId && this.users.some((u) => String(u._id) === String(this.selectedUserId))) {
-          // keep current selection
-        } else if (this.users.length) {
-          this.selectUser(this.users[0], { silent: true });
-        } else {
+        // If the previously selected user no longer exists (e.g. deleted from
+        // another tab), fall back to the idle dashboard instead of erroring.
+        if (this.selectedUserId && !this.users.some((u) => String(u._id) === String(this.selectedUserId))) {
           this.selectedUserId = null;
+          this.logs = [];
           this.view = "dashboard";
         }
+        // Intentionally no auto-select-first-user here: a fresh page load
+        // (or refresh) should always land on the idle Dashboard view.
       } catch (err) {
         console.error(err);
         this.toast_("Failed to load users");
@@ -259,6 +283,7 @@ const app = Vue.createApp({
     async selectUser(user, { silent = false } = {}) {
       this.selectedUserId = user._id;
       this.view = "workspace";
+      this.usersExpanded = true;
       this.mobileNavOpen = false;
       await this.loadLogs(user._id);
       if (!silent) this.toast_(`${user.username} selected`);
@@ -436,6 +461,10 @@ const app = Vue.createApp({
       const h = cssHeight;
       ctx.clearRect(0, 0, w, h);
 
+      const gridColor = this.darkMode ? "rgba(255,255,255,0.10)" : "#EEF0F5";
+      const labelColor = this.darkMode ? "#9CA3AF" : "#9CA3AF";
+      const emptyBarColor = this.darkMode ? "rgba(255,255,255,0.08)" : "#EEF0F5";
+
       const pad = { top: 16, right: 8, bottom: 26, left: 34 };
       const graphW = w - pad.left - pad.right;
       const graphH = h - pad.top - pad.bottom;
@@ -443,8 +472,8 @@ const app = Vue.createApp({
       const maxCal = Math.max(100, ...points.map((p) => p.calories));
 
       // grid lines + y labels
-      ctx.strokeStyle = "#EEF0F5";
-      ctx.fillStyle = "#9CA3AF";
+      ctx.strokeStyle = gridColor;
+      ctx.fillStyle = labelColor;
       ctx.font = "10px Inter, sans-serif";
       ctx.textAlign = "right";
       const steps = 4;
@@ -471,11 +500,11 @@ const app = Vue.createApp({
         const gradient = ctx.createLinearGradient(0, y, 0, pad.top + graphH);
         gradient.addColorStop(0, "#5B4FE9");
         gradient.addColorStop(1, "#8F7CFF");
-        ctx.fillStyle = p.calories > 0 ? gradient : "#EEF0F5";
+        ctx.fillStyle = p.calories > 0 ? gradient : emptyBarColor;
         roundRectTop(ctx, x, y, barWidth, Math.max(barH, 3), 6);
         ctx.fill();
 
-        ctx.fillStyle = "#9CA3AF";
+        ctx.fillStyle = labelColor;
         ctx.textAlign = "center";
         ctx.font = "10px Inter, sans-serif";
         const label = new Date(p.date + "T00:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" });
@@ -485,6 +514,73 @@ const app = Vue.createApp({
       });
 
       this.attachChartEvents(canvas);
+    },
+
+    // Lightweight, non-interactive bar chart for the dashboard's static example
+    // data. Deliberately separate from drawChart() so the real per-user chart
+    // logic above is never touched by this purely illustrative preview.
+    drawDashboardChart() {
+      const canvas = this.$refs.dashboardChartCanvas;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const dpr = window.devicePixelRatio || 1;
+      const cssWidth = canvas.clientWidth || 320;
+      const cssHeight = canvas.clientHeight || 220;
+
+      canvas.width = Math.round(cssWidth * dpr);
+      canvas.height = Math.round(cssHeight * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const w = cssWidth;
+      const h = cssHeight;
+      ctx.clearRect(0, 0, w, h);
+
+      const gridColor = this.darkMode ? "rgba(255,255,255,0.10)" : "#EEF0F5";
+      const labelColor = "#9CA3AF";
+      const emptyBarColor = this.darkMode ? "rgba(255,255,255,0.08)" : "#EEF0F5";
+
+      const pad = { top: 16, right: 8, bottom: 26, left: 34 };
+      const graphW = w - pad.left - pad.right;
+      const graphH = h - pad.top - pad.bottom;
+      const points = DASHBOARD_MOCK_WEEK;
+      const maxCal = Math.max(100, ...points.map((p) => p.calories));
+
+      ctx.strokeStyle = gridColor;
+      ctx.fillStyle = labelColor;
+      ctx.font = "10px Inter, sans-serif";
+      ctx.textAlign = "right";
+      const steps = 4;
+      for (let i = 0; i <= steps; i++) {
+        const y = pad.top + (graphH / steps) * i;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(w - pad.right, y);
+        ctx.stroke();
+        const val = Math.round(maxCal - (maxCal / steps) * i);
+        ctx.fillText(String(val), pad.left - 8, y + 3);
+      }
+
+      const barSlot = graphW / points.length;
+      const barWidth = Math.min(28, barSlot * 0.5);
+
+      points.forEach((p, i) => {
+        const cx = pad.left + barSlot * i + barSlot / 2;
+        const barH = maxCal > 0 ? (p.calories / maxCal) * graphH : 0;
+        const x = cx - barWidth / 2;
+        const y = pad.top + graphH - barH;
+
+        const gradient = ctx.createLinearGradient(0, y, 0, pad.top + graphH);
+        gradient.addColorStop(0, "#5B4FE9");
+        gradient.addColorStop(1, "#8F7CFF");
+        ctx.fillStyle = p.calories > 0 ? gradient : emptyBarColor;
+        roundRectTop(ctx, x, y, barWidth, Math.max(barH, 3), 6);
+        ctx.fill();
+
+        ctx.fillStyle = labelColor;
+        ctx.textAlign = "center";
+        ctx.font = "10px Inter, sans-serif";
+        ctx.fillText(p.label, cx, h - 8);
+      });
     },
 
     attachChartEvents(canvas) {
