@@ -20,20 +20,21 @@ app.get('/', (req, res) => {
 // user route
 app.use("/api/users/", userRoute);
 
-// Database Location  
+// Database Location
 const MONGO_URI = process.env.DB;
 
-// Database Connection
+// Database Connection (fire-and-forget: on Vercel the exported app is used
+// directly as a request handler, so startup must not block on this promise)
 mongoose.connect(MONGO_URI)
-  .then(() => {
-    console.log("Connected to database!");
+  .then(() => console.log("Connected to database!"))
+  .catch((err) => console.log("Connection failed!", err.message));
 
-    const listener = app.listen(process.env.PORT || 3000, () => {
-      console.log('Your app is listening on port ' + listener.address().port)
-    })
-  })
-  .catch(() => {
-    console.log("Connection failed!");
+// Only bind a port when run directly (local dev via `node index.js` / `nodemon index.js`).
+// On Vercel this file is imported as a module and the exported app is invoked per request instead.
+if (require.main === module) {
+  const listener = app.listen(process.env.PORT || 3000, () => {
+    console.log('Your app is listening on port ' + listener.address().port)
   });
+}
 
-
+module.exports = app;
