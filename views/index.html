@@ -79,7 +79,7 @@
 
           <button
             @click="openAddUserModal()"
-            class="flex items-center justify-center gap-2 bg-brand hover:bg-brand-dark active:scale-[0.98] transition rounded-xl py-2.5 font-medium text-sm my-1"
+            class="flex items-center gap-2 px-3 bg-brand hover:bg-brand-dark active:scale-[0.98] transition rounded-xl py-2.5 font-medium text-sm my-1 text-left"
           >
             <span v-html="icon('plus', 'w-4 h-4')"></span>
             Add User
@@ -90,7 +90,7 @@
             :class="navItemClass(view === 'workspace')"
           >
             <span v-html="icon('users', 'w-[18px] h-[18px]')"></span>
-            Active Users
+            <span class="flex-1 text-left">Active Users</span>
             <span
               class="transition-transform duration-200"
               :class="usersExpanded ? 'rotate-0' : '-rotate-90'"
@@ -109,7 +109,7 @@
               v-for="u in users"
               :key="u._id"
               @click="selectUser(u)"
-              :class="['flex items-center justify-center gap-3 px-3 py-2.5 rounded-xl text-sm text-center transition', selectedUserId === u._id ? 'bg-brand text-white shadow-card' : 'text-white/65 hover:bg-white/5 hover:text-white']"
+              :class="['flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left transition', selectedUserId === u._id ? 'bg-brand text-white shadow-card' : 'text-white/65 hover:bg-white/5 hover:text-white']"
             >
               <span
                 class="w-7 h-7 shrink-0 rounded-full grid place-items-center text-[11px] font-bold"
@@ -122,7 +122,7 @@
 
         <button
           @click="openAboutModal()"
-          class="flex items-center justify-center gap-2 border border-white/15 text-white/75 hover:bg-white/5 hover:text-white active:scale-[0.98] transition rounded-xl py-2.5 font-medium text-sm"
+          class="flex items-center gap-2 px-3 border border-white/15 text-white/75 hover:bg-white/5 hover:text-white active:scale-[0.98] transition rounded-xl py-2.5 font-medium text-sm text-left"
         >
           <span v-html="icon('info', 'w-4 h-4')"></span>
           About

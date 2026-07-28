@@ -211,7 +211,7 @@ const app = Vue.createApp({
 
     navItemClass(active) {
       return [
-        "flex items-center justify-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition text-center",
+        "flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition text-left",
         active ? "bg-brand text-white" : "text-white/65 hover:bg-white/5 hover:text-white",
       ];
     },
